@@ -1,41 +1,49 @@
-# ASN.1 BER TLV Explorer — V1
+# ASN.1 BER/DER Explorer — V2
 
-A Java 21 + JavaFX desktop application for exploring BER/DER-style ASN.1 TLV data.
+Java 21 + JavaFX desktop application for BER/DER TLV exploration and a lightweight ASN.1 definition workflow.
 
-## V1 features
+## V2 features
 
-- Open `.ber`, `.der`, or `.bin` files.
-- Paste hexadecimal BER/DER data.
-- Paste Base64 input.
-- Parse nested TLVs recursively.
-- Display tag class, tag number, constructed flag, offset, header length, value offset, length, and child count.
-- Decode common universal ASN.1 values: BOOLEAN, INTEGER, OCTET STRING, ENUMERATED, UTF8String, common character strings, UTCTime, GeneralizedTime, BIT STRING and NULL.
-- Supports BER definite-length and indefinite-length constructed values, including end-of-contents markers.
-- Select any node to inspect raw bytes and decoded value.
+- Everything from V1: BER/DER TLV parsing, HEX/Base64 input, recursive tree, offsets, lengths and raw bytes.
+- **Generate Definition**: creates an editable ASN.1-like schema from the currently parsed TLV tree.
+- **ASN.1 Definition editor** in the left pane.
+- **Apply Definition**: decodes the BER tree using field names/types from the definition and displays a named decoded tree.
+- Root type field (default `Message`).
+- Save `.asn1` definitions.
+- Raw TLV details and decoded-node details.
+- Hex viewer for the complete input.
+- BER definite and indefinite lengths.
+- High-tag-number support.
 
-## Requirements
+## Definition subset
 
-- JDK 21+
-- Maven 3.9+
+V2 intentionally starts with a small, readable ASN.1 subset: type assignments, `SEQUENCE`, `SET`, and common primitive types. Example:
+
+```asn1
+Message ::= SEQUENCE {
+    liid OCTET STRING,
+    timestamp GeneralizedTime,
+    communication Communication
+}
+
+Communication ::= SEQUENCE {
+    network NetworkInfo,
+    call CallInfo
+}
+```
+
+The generated definition uses `field1`, `field2`, etc. Rename those fields to the real protocol names, then press **Apply Definition**.
 
 ## Run
+
+Requirements: JDK 21+ and Maven 3.9+.
 
 ```bash
 mvn clean javafx:run
 ```
 
-On Apple Silicon macOS, use an ARM64 JDK 21 (for example, a current Temurin 21 build).
+On Apple Silicon, use an ARM64 JDK 21.
 
-## Build
+## Next step
 
-```bash
-mvn clean package
-```
-
-## Try the supplied sample
-
-`examples/sample_volte_iri_begin.ber` is the BER sample used while developing V1.
-
-## Architecture
-
-The UI is intentionally separate from the BER parser. The next version can add a schema/ASN.1 definition engine without replacing the TLV parser.
+V3 can extend the schema engine with explicit context-specific tags (`[0]`, `[1]`...), `OPTIONAL`, `DEFAULT`, `CHOICE`, `SEQUENCE OF`, `SET OF`, named ENUMERATED values, and automatic schema validation against the BER tag tree.

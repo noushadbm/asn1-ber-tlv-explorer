@@ -1,0 +1,56 @@
+Message ::= SEQUENCE {
+    field1 OCTET STRING,
+    field2 GeneralizedTime,
+    field3 SEQUENCE {
+        field1 SEQUENCE {
+            field1 OCTET STRING,
+            field2 OCTET STRING,
+            field3 OCTET STRING,
+        },
+        field2 SEQUENCE {
+            field1 SEQUENCE {
+                field1 ENUMERATED,
+                field2 SEQUENCE {
+                    field1 UTF8String,
+                    field2 UTF8String,
+                    field3 UTF8String,
+                    field4 OCTET STRING,
+                    field5 OCTET STRING,
+                },
+            },
+            field2 SEQUENCE {
+                field1 ENUMERATED,
+                field2 SEQUENCE {
+                    field1 UTF8String,
+                    field2 UTF8String,
+                },
+            },
+        },
+        field3 SEQUENCE {
+            field1 UTF8String,
+            field2 UTF8String,
+            field3 UTF8String,
+            field4 UTF8String,
+            field5 UTF8String,
+            field6 SEQUENCE {
+                field1 UTF8String,
+            },
+        },
+        field4 SEQUENCE {
+            field1 UTF8String,
+            field2 UTF8String,
+            field3 OCTET STRING,
+            field4 INTEGER,
+            field5 OCTET STRING,
+            field6 INTEGER,
+        },
+        field5 SEQUENCE {
+            field1 OCTET STRING,
+            field2 OCTET STRING,
+        },
+        field6 SEQUENCE {
+            field1 ENUMERATED,
+            field2 BOOLEAN,
+        },
+    },
+}
