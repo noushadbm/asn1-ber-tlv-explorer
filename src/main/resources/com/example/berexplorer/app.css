@@ -1,0 +1,16 @@
+.root {
+    -fx-font-size: 13px;
+}
+.label {
+    -fx-font-weight: bold;
+}
+.primary-button {
+    -fx-font-weight: bold;
+}
+.tree-cell {
+    -fx-font-family: 'Monospaced';
+    -fx-font-size: 12px;
+}
+.split-pane-divider {
+    -fx-padding: 0 1 0 1;
+}
