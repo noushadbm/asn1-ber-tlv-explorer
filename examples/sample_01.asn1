@@ -1,0 +1,49 @@
+-- Schema for sample_01.ber.
+-- Context tags mirror the encoded wire hierarchy. Field names follow the
+-- ETSI lawful-interception PS header and the observed VoLTE IRI payload.
+
+Message ::= SEQUENCE {
+    header [1] SEQUENCE {
+        domainIdentifier [0] OBJECT IDENTIFIER,
+        lawfulInterceptionIdentifier [1] IA5String,
+        communicationIdentifier [3] SEQUENCE {
+            networkIdentifier [0] SEQUENCE {
+                operatorIdentifier [0] IA5String,
+                networkElementIdentifier [1] IA5String
+            },
+            communicationIdentityNumber [1] OCTET STRING
+        },
+        sequenceNumber [4] INTEGER,
+        timestamp [5] GeneralizedTime,
+        timestampQualifier [8] ENUMERATED
+    },
+    payload [2] SEQUENCE {
+        iriPayload [0] SEQUENCE {
+            record SEQUENCE {
+                recordType [0] ENUMERATED,
+                iriContents [2] SEQUENCE {
+                    ipMultimediaIri [11] SEQUENCE {
+                        domainIdentifier [0] OBJECT IDENTIFIER,
+                        parameters [1] SEQUENCE {
+                            messageContainer [1] SEQUENCE {
+                                source [0] SEQUENCE {
+                                    addressType [1] ENUMERATED,
+                                    address [2] SEQUENCE {
+                                        value [2] IA5String
+                                    }
+                                },
+                                destination [1] SEQUENCE {
+                                    addressType [1] ENUMERATED,
+                                    address [2] SEQUENCE {
+                                        value [2] IA5String
+                                    }
+                                },
+                                sipMessage [2] IA5String
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
