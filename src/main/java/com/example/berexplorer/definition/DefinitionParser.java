@@ -1,5 +1,6 @@
 package com.example.berexplorer.definition;
 
+import com.example.berexplorer.model.TlvNode;
 import java.util.*;
 import java.util.regex.*;
 
@@ -11,11 +12,19 @@ public final class DefinitionParser {
     public static Schema parse(String text) {
         String cleaned = text.replaceAll("(?s)--.*?(?:\\R|$)", " ").trim();
         int begin = cleaned.indexOf("BEGIN"); int end = cleaned.lastIndexOf("END");
-        if(begin>=0 && end>begin) cleaned=cleaned.substring(begin+5,end);
+        boolean explicitTags = false;
+        if(begin>=0 && end>begin) {
+            String header = cleaned.substring(0, begin);
+            if(header.contains("AUTOMATIC TAGS")) throw new IllegalArgumentException("AUTOMATIC TAGS is not supported");
+            explicitTags = !header.contains("IMPLICIT TAGS");
+            cleaned=cleaned.substring(begin+5,end);
+        }
         Schema s=new Schema();
         for(String stmt: splitAssignments(cleaned)) {
             Matcher m=ASSIGN.matcher(stmt.trim()); if(!m.matches()) continue;
-            String name=m.group(1); Parser p=new Parser(m.group(2).trim()); Schema.Type t=p.type(); s.types.add(new Schema.TypeDef(name,t));
+            String name=m.group(1); Parser p=new Parser(m.group(2).trim(), explicitTags); Schema.Type t=p.type();
+            if(p.peek()!=null) throw new IllegalArgumentException("Unexpected token: " + p.peek());
+            s.types.add(new Schema.TypeDef(name,t));
         }
         if(s.types.isEmpty()) throw new IllegalArgumentException("No ASN.1 type assignments found. Expected: Name ::= SEQUENCE { ... }");
         return s;
@@ -32,15 +41,40 @@ public final class DefinitionParser {
     private static final class Parser {
         final List<String> tok = new ArrayList<>();
         int i;
-        Parser(String x) {
-            Matcher m = Pattern.compile("::=|\\{|\\}|,|\\(|\\)|[A-Za-z][A-Za-z0-9-]*|[0-9]+|\\.\\.").matcher(x);
-            while (m.find()) tok.add(m.group());
+        final boolean explicitTags;
+        Parser(String x, boolean explicitTags) {
+            this.explicitTags = explicitTags;
+            Matcher m = Pattern.compile("::=|\\[|\\]|\\{|\\}|,|\\(|\\)|[A-Za-z][A-Za-z0-9-]*|[0-9]+|\\.\\.").matcher(x);
+            int end = 0;
+            while (m.find()) {
+                if(!x.substring(end,m.start()).isBlank()) throw new IllegalArgumentException("Invalid schema near: " + x.substring(end,m.start()));
+                tok.add(m.group());
+                end = m.end();
+            }
+            if(!x.substring(end).isBlank()) throw new IllegalArgumentException("Invalid schema near: " + x.substring(end));
         }
         String peek(){ return i<tok.size()?tok.get(i):null; }
         String next(){ return i<tok.size()?tok.get(i++):null; }
         boolean eat(String x){ if(x.equals(peek())){i++;return true;} return false; }
 
         Schema.Type type(){
+            if(eat("[")) {
+                Schema.Type t = new Schema.Type("TAGGED");
+                t.tagClass = TlvNode.TagClass.CONTEXT_SPECIFIC;
+                if("APPLICATION".equals(peek()) || "PRIVATE".equals(peek()) || "UNIVERSAL".equals(peek())) {
+                    t.tagClass = TlvNode.TagClass.valueOf(next());
+                }
+                String number = next();
+                if(number == null || !number.matches("[0-9]+")) throw new IllegalArgumentException("Expected tag number");
+                try { t.tagNumber = Integer.parseInt(number); }
+                catch(NumberFormatException ex) { throw new IllegalArgumentException("Tag number too large: " + number); }
+                if(!eat("]")) throw new IllegalArgumentException("Expected ] after tag number");
+                t.explicit = explicitTags;
+                if(eat("IMPLICIT")) t.explicit = false;
+                else if(eat("EXPLICIT")) t.explicit = true;
+                t.innerType = type();
+                return t;
+            }
             String k=next();
             if(k==null) throw new IllegalArgumentException("Missing type");
             if(k.equals("SEQUENCE") || k.equals("SET")) {
@@ -51,7 +85,8 @@ public final class DefinitionParser {
                 }
                 Schema.Type t=new Schema.Type(k);
                 if(!eat("{")) throw new IllegalArgumentException("Expected { after "+k);
-                while(peek()!=null && !eat("}")) {
+                while(!eat("}")) {
+                    if(peek()==null) throw new IllegalArgumentException("Expected } after " + k + " fields");
                     String name=next();
                     if(name==null || name.equals(",")) continue;
                     Schema.Type ft=type();

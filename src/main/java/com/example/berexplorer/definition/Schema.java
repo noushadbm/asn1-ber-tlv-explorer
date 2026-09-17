@@ -1,5 +1,6 @@
 package com.example.berexplorer.definition;
 
+import com.example.berexplorer.model.TlvNode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +10,10 @@ public class Schema {
     public static class TypeDef { public String name; public Type type; public TypeDef(String n, Type t){name=n;type=t;} }
     public static class Type {
         public String kind; public List<Field> fields = new ArrayList<>(); public String ref; public boolean optional;
+        public Integer tagNumber;
+        public TlvNode.TagClass tagClass;
+        public boolean explicit;
+        public Type innerType;
         public Type(String k){kind=k;}
     }
     public static class Field { public String name; public Type type; public boolean optional; public Field(String n,Type t,boolean o){name=n;type=t;optional=o;} }
