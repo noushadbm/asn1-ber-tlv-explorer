@@ -89,4 +89,28 @@ public class SchemaDecoderTest {
         assertEquals("abc", decoded.children.get(0).value);
         assertSame(raw.getChildren().get(0), decoded.children.get(0).raw);
     }
+
+    @Test public void decodesSMSoIP() throws Exception {
+        // SMSoIP typical structure: SEQUENCE with message type and user data
+        Schema schema = DefinitionParser.parse(
+            "SMSoIP ::= SEQUENCE {\n" +
+            "    messageType INTEGER,\n" +
+            "    userData OCTET STRING\n" +
+            "}"
+        );
+        for (var berFile : new String[]{
+            "examples/SMSoIP-sample-1-01.ber",
+            "examples/SMSoIP-sample-1-02.ber",
+            "examples/SMSoIP-sample-2-01.ber",
+            "examples/SMSoIP-sample-2-02.ber"
+        }) {
+            var raw = BerDecoder.decodeSingle(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(berFile)));
+            var decoded = SchemaDecoder.decode(schema, "SMSoIP", raw);
+            assertNotNull(decoded);
+            assertTrue("Expected 2 fields, got " + decoded.children.size(), decoded.children.size() >= 2);
+            // Check we have messageType and userData
+            var names = decoded.children.stream().map(c -> c.name).toList();
+            assertTrue("Expected messageType field, has: " + names, names.contains("messageType") || names.contains("MessageType"));
+        }
+    }
 }
