@@ -33,7 +33,7 @@ public final class DefinitionParser {
         final List<String> tok = new ArrayList<>();
         int i;
         Parser(String x) {
-            Matcher m = Pattern.compile("::=|\\{|\\}|,|\\(|\\)|[A-Za-z][A-Za-z0-9-]*|[0-9]+|\\.\\.").matcher(x);
+            Matcher m = Pattern.compile("::=|\\{|\\}|\\[|\\]|,|\\(|\\)|[A-Za-z][A-Za-z0-9-]*|[0-9]+|\\.\\.").matcher(x);
             while (m.find()) tok.add(m.group());
         }
         String peek(){ return i<tok.size()?tok.get(i):null; }
@@ -41,15 +41,25 @@ public final class DefinitionParser {
         boolean eat(String x){ if(x.equals(peek())){i++;return true;} return false; }
 
         Schema.Type type(){
+            Integer tagNumber=null;
+            if(eat("[")) {
+                String number=next();
+                if(number==null || !number.chars().allMatch(Character::isDigit) || !eat("]"))
+                    throw new IllegalArgumentException("Expected context tag such as [0]");
+                tagNumber=Integer.valueOf(number);
+                eat("IMPLICIT");
+            }
             String k=next();
             if(k==null) throw new IllegalArgumentException("Missing type");
             if(k.equals("SEQUENCE") || k.equals("SET")) {
                 if(eat("OF")) {
                     Schema.Type t=new Schema.Type(k+" OF");
+                    t.tagNumber=tagNumber;
                     t.ref=next();
                     return t;
                 }
                 Schema.Type t=new Schema.Type(k);
+                t.tagNumber=tagNumber;
                 if(!eat("{")) throw new IllegalArgumentException("Expected { after "+k);
                 while(peek()!=null && !eat("}")) {
                     String name=next();
@@ -66,6 +76,7 @@ public final class DefinitionParser {
             else if(k.equals("OBJECT") && eat("IDENTIFIER")) k="OBJECT IDENTIFIER";
             else if(k.equals("CHARACTER") && eat("STRING")) k="CHARACTER STRING";
             Schema.Type t=new Schema.Type(k);
+            t.tagNumber=tagNumber;
             if(eat("OF")) { t.kind=k+" OF"; t.ref=next(); }
             return t;
         }

@@ -90,6 +90,22 @@ public final class BerDecoder {
             default -> n.isConstructed() ? "" : printableOrHex(v);
         };
     }
+    public static String decodeValue(TlvNode n, String declaredType) {
+        if (n.getTagClass() == TlvNode.TagClass.UNIVERSAL) return decodeValue(n);
+        byte[] v = n.getValue();
+        return switch (declaredType) {
+            case "BOOLEAN" -> v.length == 1 ? (v[0] != 0 ? "TRUE" : "FALSE") : "Invalid BOOLEAN";
+            case "INTEGER", "ENUMERATED" -> integer(v);
+            case "BIT STRING" -> bitString(v);
+            case "NULL" -> "NULL";
+            case "OBJECT IDENTIFIER" -> oid(v);
+            case "UTCTime", "GeneralizedTime", "NumericString", "PrintableString", "IA5String", "VisibleString", "GeneralString" -> new String(v, StandardCharsets.US_ASCII);
+            case "UTF8String", "T61String", "CHARACTER STRING" -> new String(v, StandardCharsets.UTF_8);
+            case "UniversalString" -> stringValue(28, v);
+            case "BMPString" -> stringValue(30, v);
+            default -> printableOrHex(v);
+        };
+    }
     private static String integer(byte[] v) { if(v.length==0)return "<empty>"; java.math.BigInteger x=new java.math.BigInteger(v); return x.toString()+" (0x"+hex(v)+")"; }
     private static String bitString(byte[] v) { if(v.length==0)return "<empty>"; return "unusedBits="+(v[0]&255)+", " + hex(Arrays.copyOfRange(v,1,v.length)); }
     private static String stringValue(int tag, byte[] v) { try { if(tag==30)return new String(v, StandardCharsets.UTF_16BE); if(tag==28)return new String(v, java.nio.charset.Charset.forName("UTF-32BE")); return new String(v, StandardCharsets.UTF_8); } catch(Exception e){return printableOrHex(v);} }

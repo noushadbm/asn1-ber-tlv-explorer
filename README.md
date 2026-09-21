@@ -17,7 +17,7 @@ Java 21 + JavaFX desktop application for BER/DER TLV exploration and a lightweig
 
 ## Definition subset
 
-V2 intentionally starts with a small, readable ASN.1 subset: type assignments, `SEQUENCE`, `SET`, and common primitive types. Example:
+V2 intentionally starts with a small, readable ASN.1 subset: type assignments, `SEQUENCE`, `SET`, context-specific field tags such as `[0]`, and common primitive types. Example:
 
 ```asn1
 Message ::= SEQUENCE {
@@ -46,4 +46,4 @@ On Apple Silicon, use an ARM64 JDK 21.
 
 ## Next step
 
-V3 can extend the schema engine with explicit context-specific tags (`[0]`, `[1]`...), `OPTIONAL`, `DEFAULT`, `CHOICE`, `SEQUENCE OF`, `SET OF`, named ENUMERATED values, and automatic schema validation against the BER tag tree.
+V3 can extend the schema engine with full `IMPLICIT`/`EXPLICIT` semantics, `DEFAULT`, `CHOICE`, complete `SEQUENCE OF`/`SET OF` handling, named ENUMERATED values, and automatic schema validation against the BER tag tree.
