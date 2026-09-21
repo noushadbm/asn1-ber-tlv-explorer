@@ -22,6 +22,24 @@ public class SchemaDecoderTest {
         assertFalse(find(decoded,"sipMessage").value.isBlank());
     }
 
+    @Test public void decodesSmsPduForMessageRecord() throws Exception {
+        Schema schema = DefinitionParser.parse(java.nio.file.Files.readString(java.nio.file.Path.of("examples/sample_01.asn1")));
+        var raw = BerDecoder.decodeSingle(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("examples/SMSoIP-sample-1-01.ber")));
+        var decoded = SchemaDecoder.decode(schema, "Message", raw);
+        var sms = find(decoded,"smsPdu");
+        assertNotNull(sms);
+        assertTrue(sms.value.contains("Content-Length: 93 bytes"));
+        assertTrue(sms.value.contains("TPDU: SMS-SUBMIT"));
+        assertTrue(sms.value.contains("SMS text:"));
+    }
+
+    @Test public void doesNotAddSmsForEmptySipBody() throws Exception {
+        Schema schema = DefinitionParser.parse(java.nio.file.Files.readString(java.nio.file.Path.of("examples/sample_01.asn1")));
+        var raw = BerDecoder.decodeSingle(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("examples/SMSoIP-sample-1-02.ber")));
+        var decoded = SchemaDecoder.decode(schema, "Message", raw);
+        assertNull(find(decoded,"smsPdu"));
+    }
+
     @Test public void decodesExplicitTag() {
         var decoded = decode("Message ::= [1] EXPLICIT INTEGER", "A1 03 02 01 2A");
         assertEquals("42 (0x2A)", decoded.value);

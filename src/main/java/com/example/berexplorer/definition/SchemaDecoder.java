@@ -32,13 +32,20 @@ public final class SchemaDecoder {
         }
         if(isConstructedKind(t.kind)){
             DecodedNode d=new DecodedNode(label,t.kind,n,"<constructed>");
-            if(t.kind.equals("SEQUENCE")||t.kind.equals("SET")){int idx=0; for(Schema.Field f:t.fields){if(idx>=n.getChildren().size()){if(!f.optional) d.children.add(new DecodedNode(f.name,f.type.kind,null,"<missing>")); continue;} TlvNode child=n.getChildren().get(idx); if(!matches(f.type,child,s)){if(f.optional)continue; d.children.add(new DecodedNode(f.name,f.type.kind,child,"<tag/type mismatch>")); idx++; continue;} d.children.add(decodeType(s,f.name,resolve(s,f.type),child,f.name)); idx++;} if(idx<n.getChildren().size()) for(;idx<n.getChildren().size();idx++)d.children.add(new DecodedNode("[unmapped-"+idx+"]",n.getChildren().get(idx).universalTypeName(),n.getChildren().get(idx),BerDecoder.decodeValue(n.getChildren().get(idx)))); }
+            if(t.kind.equals("SEQUENCE")||t.kind.equals("SET")){int idx=0; for(Schema.Field f:t.fields){if(idx>=n.getChildren().size()){if(!f.optional) d.children.add(new DecodedNode(f.name,f.type.kind,null,"<missing>")); continue;} TlvNode child=n.getChildren().get(idx); if(!matches(f.type,child,s)){if(f.optional)continue; d.children.add(new DecodedNode(f.name,f.type.kind,child,"<tag/type mismatch>")); idx++; continue;} d.children.add(decodeType(s,f.name,resolve(s,f.type),child,f.name)); idx++;} if(idx<n.getChildren().size()) for(;idx<n.getChildren().size();idx++)d.children.add(new DecodedNode("[unmapped-"+idx+"]",n.getChildren().get(idx).universalTypeName(),n.getChildren().get(idx),BerDecoder.decodeValue(n.getChildren().get(idx)))); addSmsPduIfMessage(d); }
             else if(t.ref!=null){Schema.Type rt=resolve(s,t); d.children.addAll(decodeType(s,label,rt,n,display).children);}
             return d;
         }
         return new DecodedNode(label,t.kind,n,n==null?"<missing>":decodeValue(t,n));
     }
     private static String decodeValue(Schema.Type t,TlvNode n){String value=BerDecoder.decodeValue(n);if(!t.kind.equals("ENUMERATED")||t.enumValues.isEmpty())return value;String label="UNKNOWN";try{label=t.enumValues.getOrDefault(new java.math.BigInteger(n.getValue()).intValueExact(),"UNKNOWN");}catch(ArithmeticException|NumberFormatException ignored){}return value+" ["+label+"]";}
+    private static void addSmsPduIfMessage(DecodedNode record){
+        DecodedNode recordType=record.children.stream().filter(c->c.name.equals("recordType")).findFirst().orElse(null);
+        DecodedNode sip=find(record,"sipMessage");
+        if(recordType==null||sip==null||sip.raw==null||recordType.raw==null||recordType.raw.getValue().length==0)return;
+        try{if(new java.math.BigInteger(recordType.raw.getValue()).intValueExact()==4&&SmsPduDecoder.hasPositiveContentLength(sip.raw.getValue()))sip.children.add(new DecodedNode("smsPdu","SMS-PDU",sip.raw,SmsPduDecoder.decode(sip.raw.getValue())));}catch(ArithmeticException|NumberFormatException ignored){}
+    }
+    private static DecodedNode find(DecodedNode node,String name){if(node.name.equals(name))return node;for(DecodedNode child:node.children){DecodedNode match=find(child,name);if(match!=null)return match;}return null;}
     private static boolean isConstructedKind(String k){return k.equals("SEQUENCE")||k.equals("SET")||k.endsWith(" OF");}
     private static Schema.Type resolve(Schema s,Schema.Type t){if(t.ref!=null){Schema.TypeDef d=s.find(t.ref);if(d==null)throw new IllegalArgumentException("Unknown type: "+t.ref);return d.type;}return t;}
     private static boolean matches(Schema.Type t,TlvNode n,Schema s){Schema.Type x=resolve(s,t);

@@ -8,6 +8,7 @@ Java 21 + JavaFX desktop application for BER/DER TLV exploration and a lightweig
 - **Generate Definition**: creates an editable ASN.1-like schema from the currently parsed TLV tree.
 - **ASN.1 Definition editor** in the left pane.
 - **Apply Definition**: decodes the BER tree using field names/types from the definition and displays a named decoded tree.
+- MESSAGE records with a non-zero SIP `Content-Length` expose decoded SMS PDU details when the body is RP-DATA containing an SMS-SUBMIT TPDU.
 - Root type field (default `Message`).
 - Save `.asn1` definitions.
 - Raw TLV details and decoded-node details.
