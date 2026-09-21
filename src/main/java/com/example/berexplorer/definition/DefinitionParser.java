@@ -11,13 +11,16 @@ public final class DefinitionParser {
 
     public static Schema parse(String text) {
         String cleaned = text.replaceAll("(?s)--.*?(?:\\R|$)", " ").trim();
-        int begin = cleaned.indexOf("BEGIN"); int end = cleaned.lastIndexOf("END");
         boolean explicitTags = false;
-        if(begin>=0 && end>begin) {
-            String header = cleaned.substring(0, begin);
+        Matcher moduleBegin = Pattern.compile("(?s)\\bDEFINITIONS\\b.*?::=\\s*BEGIN\\b").matcher(cleaned);
+        if(moduleBegin.find()) {
+            Matcher moduleEnd = Pattern.compile("(?m)^\\s*END\\s*$").matcher(cleaned);
+            moduleEnd.region(moduleBegin.end(),cleaned.length());
+            if(!moduleEnd.find()) throw new IllegalArgumentException("Missing END for ASN.1 module");
+            String header = cleaned.substring(0,moduleBegin.end());
             if(header.contains("AUTOMATIC TAGS")) throw new IllegalArgumentException("AUTOMATIC TAGS is not supported");
             explicitTags = !header.contains("IMPLICIT TAGS");
-            cleaned=cleaned.substring(begin+5,end);
+            cleaned=cleaned.substring(moduleBegin.end(),moduleEnd.start());
         }
         Schema s=new Schema();
         for(String stmt: splitAssignments(cleaned)) {
@@ -101,6 +104,18 @@ public final class DefinitionParser {
             else if(k.equals("OBJECT") && eat("IDENTIFIER")) k="OBJECT IDENTIFIER";
             else if(k.equals("CHARACTER") && eat("STRING")) k="CHARACTER STRING";
             Schema.Type t=new Schema.Type(k);
+            if(k.equals("ENUMERATED") && eat("{")) {
+                while(!eat("}")) {
+                    if(peek()==null) throw new IllegalArgumentException("Expected } after ENUMERATED values");
+                    String label=next();
+                    if(!eat("(")) throw new IllegalArgumentException("Expected ( after ENUMERATED label "+label);
+                    String number=next();
+                    if(number==null || !number.matches("[0-9]+") || !eat(")"))
+                        throw new IllegalArgumentException("Expected numeric ENUMERATED value for "+label);
+                    t.enumValues.put(Integer.valueOf(number),label);
+                    eat(",");
+                }
+            }
             if(eat("OF")) { t.kind=k+" OF"; t.ref=next(); }
             return t;
         }

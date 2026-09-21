@@ -2,7 +2,9 @@ package com.example.berexplorer.definition;
 
 import com.example.berexplorer.model.TlvNode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Schema {
     public final List<TypeDef> types = new ArrayList<>();
@@ -10,6 +12,7 @@ public class Schema {
     public static class TypeDef { public String name; public Type type; public TypeDef(String n, Type t){name=n;type=t;} }
     public static class Type {
         public String kind; public List<Field> fields = new ArrayList<>(); public String ref; public boolean optional;
+        public Map<Integer,String> enumValues = new LinkedHashMap<>();
         public Integer tagNumber;
         public TlvNode.TagClass tagClass;
         public boolean explicit;

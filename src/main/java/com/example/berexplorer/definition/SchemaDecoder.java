@@ -36,8 +36,9 @@ public final class SchemaDecoder {
             else if(t.ref!=null){Schema.Type rt=resolve(s,t); d.children.addAll(decodeType(s,label,rt,n,display).children);}
             return d;
         }
-        return new DecodedNode(label,t.kind,n,n==null?"<missing>":BerDecoder.decodeValue(n));
+        return new DecodedNode(label,t.kind,n,n==null?"<missing>":decodeValue(t,n));
     }
+    private static String decodeValue(Schema.Type t,TlvNode n){String value=BerDecoder.decodeValue(n);if(!t.kind.equals("ENUMERATED")||t.enumValues.isEmpty())return value;String label="UNKNOWN";try{label=t.enumValues.getOrDefault(new java.math.BigInteger(n.getValue()).intValueExact(),"UNKNOWN");}catch(ArithmeticException|NumberFormatException ignored){}return value+" ["+label+"]";}
     private static boolean isConstructedKind(String k){return k.equals("SEQUENCE")||k.equals("SET")||k.endsWith(" OF");}
     private static Schema.Type resolve(Schema s,Schema.Type t){if(t.ref!=null){Schema.TypeDef d=s.find(t.ref);if(d==null)throw new IllegalArgumentException("Unknown type: "+t.ref);return d.type;}return t;}
     private static boolean matches(Schema.Type t,TlvNode n,Schema s){Schema.Type x=resolve(s,t);

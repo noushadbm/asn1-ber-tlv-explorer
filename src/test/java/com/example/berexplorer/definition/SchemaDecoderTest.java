@@ -17,6 +17,7 @@ public class SchemaDecoderTest {
         var header = decoded.children.get(0);
         assertTrue(header.children.get(0).value.matches("[0-9]+(\\.[0-9]+)+"));
         assertTrue(header.children.get(3).value.matches("-?[0-9]+ \\(0x[0-9A-F ]+\\)"));
+        assertEquals("3 (0x03) [CONTINUE]",find(decoded,"recordType").value);
         assertEquals("IA5String", find(decoded,"sipMessage").type);
         assertFalse(find(decoded,"sipMessage").value.isBlank());
     }
@@ -50,6 +51,15 @@ public class SchemaDecoderTest {
     @Test public void preservesUntaggedDecoding() {
         var decoded = decode("Message ::= SEQUENCE { value INTEGER }", "30 03 02 01 2A");
         assertEquals("42 (0x2A)", decoded.children.get(0).value);
+    }
+
+    @Test public void decodesNamedEnumeratedValues() {
+        String schema = "Message ::= [0] ENUMERATED { BEGIN(1), END(2), CONTINUE(3), MESSAGE(4) }";
+        assertEquals("1 (0x01) [BEGIN]", decode(schema,"80 01 01").value);
+        assertEquals("2 (0x02) [END]", decode(schema,"80 01 02").value);
+        assertEquals("3 (0x03) [CONTINUE]", decode(schema,"80 01 03").value);
+        assertEquals("4 (0x04) [MESSAGE]", decode(schema,"80 01 04").value);
+        assertEquals("5 (0x05) [UNKNOWN]", decode(schema,"80 01 05").value);
     }
 
     @Test public void rejectsMalformedTags() {

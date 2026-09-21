@@ -20,7 +20,12 @@ Message ::= SEQUENCE {
     payload [2] SEQUENCE {
         iriPayload [0] SEQUENCE {
             record SEQUENCE {
-                recordType [0] ENUMERATED,
+                recordType [0] ENUMERATED {
+                    BEGIN(1),
+                    END(2),
+                    CONTINUE(3),
+                    MESSAGE(4)
+                },
                 iriContents [2] SEQUENCE {
                     ipMultimediaIri [11] SEQUENCE {
                         domainIdentifier [0] OBJECT IDENTIFIER,
