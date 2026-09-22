@@ -16,6 +16,8 @@ import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import java.io.*;
@@ -73,6 +75,24 @@ public class Main extends Application {
         Tab dec=new Tab("Decoded Message",inspect); dec.setClosable(false);
         Tab hx=new Tab("Hex Viewer",hexView); hx.setClosable(false); hexView.setEditable(false); hexView.setStyle("-fx-font-family: monospace;");
         tabs.getTabs().addAll(tlv,dec,hx); rawTree.setShowRoot(true); decodedTree.setShowRoot(true);
+        decodedTree.setCellFactory(tree -> new TreeCell<>() {
+            @Override protected void updateItem(SchemaDecoder.DecodedNode value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty || value == null) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label prefix = new Label(value.name + " : " + value.type + " = ");
+                Label decodedValue = new Label(value.value);
+                if (!value.value.contains("\n") && !value.value.contains("\r")) {
+                    decodedValue.setFont(Font.font(decodedValue.getFont().getFamily(), FontWeight.BOLD, decodedValue.getFont().getSize()));
+                }
+                HBox content = new HBox(prefix, decodedValue);
+                setText(null);
+                setGraphic(content);
+            }
+        });
         rawTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null)showDetails(b.getValue());});
         decodedTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null)showDecodedDetails(b.getValue());});
         return tabs;
