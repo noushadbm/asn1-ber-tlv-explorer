@@ -94,7 +94,7 @@ public class Main extends Application {
             }
         });
         rawTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null)showDetails(b.getValue());});
-        decodedTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null)showDecodedDetails(b.getValue());});
+        decodedTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null){showDecodedDetails(b.getValue());highlightEncodedInput(b.getValue().raw);}});
         return tabs;
     }
 
@@ -119,6 +119,23 @@ public class Main extends Application {
         StringBuilder s=new StringBuilder(); s.append("Type: ").append(n.universalTypeName()).append('\n'); s.append("Tag class: ").append(n.getTagClass()).append('\n'); s.append("Tag number: ").append(n.getTagNumber()).append(" (0x").append(Integer.toHexString(n.getTagNumber()).toUpperCase()).append(")\n"); s.append("Constructed: ").append(n.isConstructed()).append('\n'); s.append("Offset: ").append(n.getOffset()).append('\n'); s.append("Header length: ").append(n.getHeaderLength()).append('\n'); s.append("Value offset: ").append(n.getValueOffset()).append('\n'); s.append("Length: ").append(n.getLength()<0?"indefinite":n.getLength()).append('\n'); s.append("Total TLV length: ").append(n.getTotalLength()).append('\n'); s.append("Children: ").append(n.getChildren().size()).append('\n'); if(n.getLength()>=0){s.append("Value: ").append(BerDecoder.decodeValue(n)).append('\n');} if(n.getOffset()>=0 && n.getOffset()+n.getTotalLength()<=currentBytes.length){s.append("Raw TLV:\n").append(Hex.format(Arrays.copyOfRange(currentBytes,n.getOffset(),n.getOffset()+n.getTotalLength())));} details.setText(s.toString());
     }
     private void showDecodedDetails(SchemaDecoder.DecodedNode n){StringBuilder s=new StringBuilder();s.append("Name: ").append(n.name).append('\n').append("ASN.1 type: ").append(n.type).append('\n').append("Value: ").append(n.value).append('\n');if(n.raw!=null){s.append("Tag: ").append(n.raw.getTagClass()).append(' ').append(n.raw.getTagNumber()).append('\n').append("Offset: ").append(n.raw.getOffset()).append('\n').append("Length: ").append(n.raw.getLength()).append('\n');}details.setText(s.toString());}
+
+    private void highlightEncodedInput(TlvNode node) {
+        if(node==null || node.getOffset()<0 || node.getTotalLength()<=0)return;
+        if(!"HEX".equals(format.getValue())) {
+            format.setValue("HEX");
+            input.setText(toHex(currentBytes));
+        }
+        List<Integer> digits=new ArrayList<>();
+        String text=input.getText();
+        for(int i=0;i<text.length();i++) {
+            if(text.charAt(i)=='0' && i+1<text.length() && (text.charAt(i+1)=='x'||text.charAt(i+1)=='X')) {i++;continue;}
+            if(Character.digit(text.charAt(i),16)>=0)digits.add(i);
+        }
+        int first=node.getOffset()*2;
+        int last=(node.getOffset()+node.getTotalLength())*2-1;
+        if(first>=0 && last<digits.size())input.selectRange(digits.get(first),digits.get(last)+1);
+    }
 
     private void openFile(Stage stage){FileChooser fc=new FileChooser();fc.setTitle("Open BER/DER file");fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("BER/DER files","*.ber","*.der","*.bin","*.dat","*.*"));File f=fc.showOpenDialog(stage);if(f==null)return;try{currentBytes=Files.readAllBytes(f.toPath());format.setValue("HEX");input.setText(toHex(currentBytes));decodeInput();}catch(Exception ex){showError("Cannot open file",ex);}}
     private String toHex(byte[] b){StringBuilder s=new StringBuilder();for(int i=0;i<b.length;i++){if(i>0)s.append(' ');s.append(String.format("%02X",b[i]));}return s.toString();}
