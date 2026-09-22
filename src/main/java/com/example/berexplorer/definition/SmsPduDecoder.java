@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 final class SmsPduDecoder {
     private static final Pattern CONTENT_LENGTH = Pattern.compile("(?im)^Content-Length\\s*:\\s*(\\d+)\\s*$");
-    private static final char[] GSM7 = "@£$¥èéùìòÇ\\nØø\\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\\u001bÆæßÉ !\\\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà".toCharArray();
+    private static final char[] GSM7 = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\u001bÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà".toCharArray();
 
     private SmsPduDecoder() {}
 

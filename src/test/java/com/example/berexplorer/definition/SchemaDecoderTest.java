@@ -30,7 +30,8 @@ public class SchemaDecoderTest {
         assertNotNull(sms);
         assertTrue(sms.value.contains("Content-Length: 93 bytes"));
         assertTrue(sms.value.contains("TPDU: SMS-SUBMIT"));
-        assertTrue(sms.value.contains("SMS text:"));
+        assertTrue(sms.value.contains("SMS text: Hi this is test sms for new mediation system. Welcome you all."));
+        assertTrue(sms.value.contains("Have a nice day"));
     }
 
     @Test public void doesNotAddSmsForEmptySipBody() throws Exception {
