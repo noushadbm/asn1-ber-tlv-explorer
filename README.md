@@ -45,6 +45,37 @@ mvn clean javafx:run
 
 On Apple Silicon, use an ARM64 JDK 21.
 
+The platform profile must be selected explicitly. This also allows cross-building a target JAR from another operating system.
+
+## Build Executable JARs
+
+JavaFX includes platform-native libraries, so build a JAR for the target operating system. Each command creates an executable fat JAR in `target/` with the JavaFX runtime for that platform:
+
+```bash
+# Windows x64
+mvn -Pwindows clean package
+
+# Linux x64
+mvn -Plinux clean package
+
+# Linux ARM64
+mvn -Plinux-aarch64 clean package
+
+# macOS Intel
+mvn -Pmac clean package
+
+# macOS Apple Silicon
+mvn -Pmac-aarch64 clean package
+```
+
+Run the resulting JAR with Java 21 or newer:
+
+```bash
+java -jar target/asn1-ber-tlv-explorer-0.2.0-<platform>.jar
+```
+
+The build machine does not need to match the target platform, but Maven must be able to download that platform's JavaFX artifacts. The JAR includes application and JavaFX dependencies; it does not include a Java runtime. For an installer that bundles Java and avoids requiring Java on the target machine, use `jpackage` on each target operating system after building its platform JAR.
+
 ## Next step
 
 V3 can extend the schema engine with explicit context-specific tags (`[0]`, `[1]`...), `OPTIONAL`, `DEFAULT`, `CHOICE`, `SEQUENCE OF`, `SET OF`, named ENUMERATED values, and automatic schema validation against the BER tag tree.
