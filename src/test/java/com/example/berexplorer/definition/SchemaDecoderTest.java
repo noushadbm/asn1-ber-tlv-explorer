@@ -41,6 +41,18 @@ public class SchemaDecoderTest {
         assertNull(find(decoded,"smsPdu"));
     }
 
+    @Test public void decodesMobileTerminatedSmsPdu() throws Exception {
+        Schema schema = DefinitionParser.parse(java.nio.file.Files.readString(java.nio.file.Path.of("examples/sample_01.asn1")));
+        var raw = BerDecoder.decodeSingle(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("examples/sms_2.ber")));
+        var decoded = SchemaDecoder.decode(schema, "Message", raw);
+        var sms = find(decoded,"smsPdu");
+        assertNotNull(sms);
+        assertTrue(sms.value.contains("RP-DATA-MT: message reference 53"));
+        assertTrue(sms.value.contains("TPDU: SMS-DELIVER"));
+        assertTrue(sms.value.contains("Data coding scheme: 0x08"));
+        assertTrue(sms.value.contains("SMS text: أهلين وسهلين بخير وصحه"));
+    }
+
     @Test public void decodesExplicitTag() {
         var decoded = decode("Message ::= [1] EXPLICIT INTEGER", "A1 03 02 01 2A");
         assertEquals("42 (0x2A)", decoded.value);

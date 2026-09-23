@@ -48,17 +48,24 @@ final class SmsPduDecoder {
     private static void parseRpData(byte[] pdu, StringBuilder out) {
         if (pdu.length < 4) throw new IllegalArgumentException("too short for RP-DATA");
         int messageType = u8(pdu[0]);
-        if (messageType != 0) throw new IllegalArgumentException("unsupported RP message type 0x" + hexByte(messageType));
+        if (messageType != 0 && messageType != 1) throw new IllegalArgumentException("unsupported RP message type 0x" + hexByte(messageType));
         int pos = 1;
         int messageReference = u8(pdu[pos++]);
-        int destinationLength = u8(pdu[pos++]);
-        pos = require(pdu, pos, destinationLength, "RP destination address");
-        int originatorLength = u8(pdu[pos++]);
-        pos = require(pdu, pos, originatorLength, "RP originator address");
+        if(messageType==0) {
+            int destinationLength = u8(pdu[pos++]);
+            pos = require(pdu, pos, destinationLength, "RP destination address");
+            int originatorLength = u8(pdu[pos++]);
+            pos = require(pdu, pos, originatorLength, "RP originator address");
+        } else {
+            int originatorLength = u8(pdu[pos++]);
+            pos = require(pdu, pos, originatorLength, "RP originator address");
+            int destinationLength = u8(pdu[pos++]);
+            pos = require(pdu, pos, destinationLength, "RP destination address");
+        }
         if (pos >= pdu.length) throw new IllegalArgumentException("missing RP user-data length");
         int userDataLength = u8(pdu[pos++]);
         if (userDataLength > pdu.length - pos) throw new IllegalArgumentException("RP user-data length exceeds payload");
-        out.append("RP-DATA: message reference ").append(messageReference)
+        out.append(messageType==0?"RP-DATA-MO":"RP-DATA-MT").append(": message reference ").append(messageReference)
                 .append(", user data ").append(userDataLength).append(" bytes\n");
         parseTpdu(pdu, pos, userDataLength, out);
     }
@@ -84,8 +91,17 @@ final class SmsPduDecoder {
             if (pos >= end) throw new IllegalArgumentException("missing SMS user-data length");
             int userDataLength = u8(pdu[pos++]);
             appendUserData(pdu, pos, end, userDataLength, dcs, (first & 0x40) != 0, out);
+        } else if(mti==0) {
+            pos = parseAddress(pdu, pos, end, "originator", out);
+            pos = require(pdu, pos, 2, "SMS-DELIVER PID/DCS");
+            int dcs=u8(pdu[pos-1]);
+            out.append("Data coding scheme: 0x").append(hexByte(dcs)).append('\n');
+            pos=require(pdu,pos,7,"SMS-DELIVER service-center timestamp");
+            if(pos>=end)throw new IllegalArgumentException("missing SMS user-data length");
+            int userDataLength=u8(pdu[pos++]);
+            appendUserData(pdu,pos,end,userDataLength,dcs,(first&0x40)!=0,out);
         } else {
-            out.append("TPDU decoding: only SMS-SUBMIT user data is currently supported");
+            out.append("TPDU decoding: this SMS message type is not yet supported");
         }
     }
 
