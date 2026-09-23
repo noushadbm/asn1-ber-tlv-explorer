@@ -85,7 +85,8 @@ public class Main extends Application {
                 }
                 Label prefix = new Label(value.name + " : " + value.type + " = ");
                 Label decodedValue = new Label(value.value);
-                if (!value.value.contains("\n") && !value.value.contains("\r")) {
+                if (getTreeItem() != null && getTreeItem().isLeaf()
+                        && !value.value.contains("\n") && !value.value.contains("\r")) {
                     decodedValue.setFont(Font.font(decodedValue.getFont().getFamily(), FontWeight.BOLD, decodedValue.getFont().getSize()));
                 }
                 HBox content = new HBox(prefix, decodedValue);
