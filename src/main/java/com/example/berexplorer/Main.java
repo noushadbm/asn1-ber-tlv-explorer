@@ -15,6 +15,8 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -30,6 +32,9 @@ public class Main extends Application {
     private final TreeView<TlvNode> rawTree = new TreeView<>();
     private final TreeView<SchemaDecoder.DecodedNode> decodedTree = new TreeView<>();
     private final TextArea details = new TextArea();
+    private final TextField detailsSearch = new TextField();
+    private final Label detailsSearchStatus = new Label();
+    private final HBox detailsSearchBar = new HBox();
     private final TextArea hexView = new TextArea();
     private final ComboBox<String> format = new ComboBox<>();
     private final TextField rootType = new TextField("Message");
@@ -71,7 +76,23 @@ public class Main extends Application {
     private Node resultPane(){
         TabPane tabs=new TabPane();
         Tab tlv=new Tab("TLV Explorer",rawTree); tlv.setClosable(false);
-        SplitPane inspect=new SplitPane(decodedTree,details); inspect.setDividerPositions(.55); details.setEditable(false); details.setWrapText(true); details.setStyle("-fx-font-family: monospace;");
+        detailsSearch.setPromptText("Find in details");
+        HBox.setHgrow(detailsSearch,Priority.ALWAYS);
+        Button previousMatch=new Button("Previous"); previousMatch.setOnAction(e->findDetailsMatch(true,false));
+        Button nextMatch=new Button("Next"); nextMatch.setOnAction(e->findDetailsMatch(false,false));
+        Button closeSearch=new Button("Close"); closeSearch.setOnAction(e->hideDetailsSearch());
+        detailsSearchBar.getChildren().addAll(detailsSearch,detailsSearchStatus,previousMatch,nextMatch,closeSearch);
+        detailsSearchBar.setSpacing(6); detailsSearchBar.setPadding(new Insets(0,0,6,0));
+        detailsSearchBar.setVisible(false); detailsSearchBar.setManaged(false);
+        VBox detailsPanel=new VBox(detailsSearchBar,details); VBox.setVgrow(details,Priority.ALWAYS); detailsPanel.setPadding(new Insets(6));
+        SplitPane inspect=new SplitPane(decodedTree,detailsPanel); inspect.setDividerPositions(.55); details.setEditable(false); details.setWrapText(true); details.setStyle("-fx-font-family: monospace;");
+        inspect.addEventFilter(KeyEvent.KEY_PRESSED,e->{
+            if(e.isShortcutDown() && e.getCode()==KeyCode.F){showDetailsSearch();e.consume();}
+            else if(e.getCode()==KeyCode.ESCAPE && detailsSearchBar.isVisible()){hideDetailsSearch();e.consume();}
+            else if(e.getCode()==KeyCode.ENTER && detailsSearch.isFocused()){findDetailsMatch(e.isShiftDown(),false);e.consume();}
+        });
+        detailsSearch.textProperty().addListener((obs,oldValue,newValue)->findDetailsMatch(false,true));
+        details.textProperty().addListener((obs,oldValue,newValue)->{if(detailsSearchBar.isVisible())findDetailsMatch(false,true);});
         Tab dec=new Tab("Decoded Message",inspect); dec.setClosable(false);
         Tab hx=new Tab("Hex Viewer",hexView); hx.setClosable(false); hexView.setEditable(false); hexView.setStyle("-fx-font-family: monospace;");
         tabs.getTabs().addAll(tlv,dec,hx); rawTree.setShowRoot(true); decodedTree.setShowRoot(true);
@@ -97,6 +118,44 @@ public class Main extends Application {
         rawTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null)showDetails(b.getValue());});
         decodedTree.getSelectionModel().selectedItemProperty().addListener((obs,a,b)->{if(b!=null){showDecodedDetails(b.getValue());highlightEncodedInput(b.getValue().raw);}});
         return tabs;
+    }
+
+    private void showDetailsSearch(){
+        detailsSearchBar.setManaged(true); detailsSearchBar.setVisible(true);
+        detailsSearch.requestFocus(); detailsSearch.selectAll();
+        findDetailsMatch(false,true);
+    }
+
+    private void hideDetailsSearch(){
+        detailsSearchBar.setVisible(false); detailsSearchBar.setManaged(false);
+        detailsSearchStatus.setText("");
+        details.requestFocus();
+    }
+
+    private void findDetailsMatch(boolean backwards,boolean fromStart){
+        String query=detailsSearch.getText();
+        if(query==null || query.isEmpty()){detailsSearchStatus.setText("");return;}
+        String text=details.getText().toLowerCase(Locale.ROOT);
+        String target=query.toLowerCase(Locale.ROOT);
+        List<Integer> matches=new ArrayList<>();
+        for(int at=text.indexOf(target);at>=0;at=text.indexOf(target,at+Math.max(1,target.length())))matches.add(at);
+        if(matches.isEmpty()){detailsSearchStatus.setText("No matches");return;}
+        int selectionStart=details.getSelection().getStart();
+        int selectionEnd=details.getSelection().getEnd();
+        int matchIndex=0;
+        if(!fromStart){
+            if(backwards){
+                matchIndex=matches.size()-1;
+                for(int i=matches.size()-1;i>=0;i--)if(matches.get(i)<selectionStart){matchIndex=i;break;}
+            }else{
+                int start=selectionEnd;
+                matchIndex=0;
+                for(int i=0;i<matches.size();i++)if(matches.get(i)>=start){matchIndex=i;break;}
+            }
+        }
+        int matchStart=matches.get(matchIndex);
+        details.selectRange(matchStart,matchStart+query.length());
+        detailsSearchStatus.setText((matchIndex+1)+" / "+matches.size());
     }
 
     private void decodeInput(){
