@@ -41,6 +41,8 @@ public class Main extends Application {
     private byte[] currentBytes = new byte[0];
     private TlvNode root;
     private Schema schema;
+    private final Label berFileLabel = new Label("No file");
+    private final Label defFileLabel = new Label("No file");
 
     @Override public void start(Stage stage) {
         stage.setTitle("ASN.1 BER/DER Explorer — V2");
@@ -48,6 +50,7 @@ public class Main extends Application {
         rootPane.setTop(toolbar(stage));
         SplitPane center = new SplitPane(inputPane(), resultPane()); center.setDividerPositions(.40);
         rootPane.setCenter(center);
+        rootPane.setBottom(statusBar());
         Scene scene = new Scene(rootPane, 1400, 850);
         stage.setScene(scene); stage.show();
     }
@@ -55,7 +58,7 @@ public class Main extends Application {
     private Node toolbar(Stage stage) {
         Button open=new Button("Open BER/DER"); open.setOnAction(e->openFile(stage));
         Button openDef=new Button("Open Definition"); openDef.setOnAction(e->openDefinition(stage));
-        Button newDef=new Button("New Definition"); newDef.setOnAction(e->definition.clear());
+        Button newDef=new Button("New Definition"); newDef.setOnAction(e->{definition.clear(); setDefinitionFile(null);});
         Button decode=new Button("Decode TLV"); decode.setOnAction(e->decodeInput());
         Button generate=new Button("Generate Definition"); generate.setOnAction(e->generateDefinition());
         Button apply=new Button("Apply Definition"); apply.setOnAction(e->applyDefinition());
@@ -64,6 +67,53 @@ public class Main extends Application {
         Label rootLabel=new Label("Root:"); rootType.setPrefWidth(130);
         HBox bar=new HBox(8,open,openDef,new Label("Input:"),format,decode,new Separator(),generate,apply,newDef,saveDef,rootLabel,rootType);
         bar.setPadding(new Insets(8)); return bar;
+    }
+
+    private Node statusBar() {
+        Label berCaption = new Label("BER/DER:");
+        berCaption.setStyle("-fx-font-weight: bold;");
+        berFileLabel.setTooltip(new Tooltip(berFileLabel.getText()));
+        berFileLabel.setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
+        berFileLabel.setMaxWidth(Double.MAX_VALUE);
+        HBox berBox = new HBox(6, berCaption, berFileLabel);
+        HBox.setHgrow(berFileLabel, Priority.ALWAYS);
+
+        Label defCaption = new Label("Definition:");
+        defCaption.setStyle("-fx-font-weight: bold;");
+        defFileLabel.setTooltip(new Tooltip(defFileLabel.getText()));
+        defFileLabel.setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
+        defFileLabel.setMaxWidth(Double.MAX_VALUE);
+        HBox defBox = new HBox(6, defCaption, defFileLabel);
+        HBox.setHgrow(defFileLabel, Priority.ALWAYS);
+
+        HBox bar = new HBox(12, berBox, new Separator(), defBox);
+        HBox.setHgrow(berBox, Priority.ALWAYS);
+        HBox.setHgrow(defBox, Priority.ALWAYS);
+        berBox.setMaxWidth(Double.MAX_VALUE);
+        defBox.setMaxWidth(Double.MAX_VALUE);
+        bar.setPadding(new Insets(4, 8, 4, 8));
+        bar.setStyle("-fx-border-color: #cccccc transparent transparent transparent; -fx-background-color: #f4f4f4;");
+        return bar;
+    }
+
+    private void setBerFile(File f) {
+        if (f == null) {
+            berFileLabel.setText("No file");
+            berFileLabel.setTooltip(new Tooltip("No file"));
+        } else {
+            berFileLabel.setText(f.getAbsolutePath());
+            berFileLabel.setTooltip(new Tooltip(f.getAbsolutePath()));
+        }
+    }
+
+    private void setDefinitionFile(File f) {
+        if (f == null) {
+            defFileLabel.setText("No file");
+            defFileLabel.setTooltip(new Tooltip("No file"));
+        } else {
+            defFileLabel.setText(f.getAbsolutePath());
+            defFileLabel.setTooltip(new Tooltip(f.getAbsolutePath()));
+        }
     }
 
     private Node inputPane(){
@@ -197,15 +247,15 @@ public class Main extends Application {
         if(first>=0 && last<digits.size())input.selectRange(digits.get(first),digits.get(last)+1);
     }
 
-    private void openFile(Stage stage){FileChooser fc=new FileChooser();fc.setTitle("Open BER/DER file");fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("BER/DER files","*.ber","*.der","*.bin","*.dat","*.*"));File f=fc.showOpenDialog(stage);if(f==null)return;try{currentBytes=Files.readAllBytes(f.toPath());format.setValue("HEX");input.setText(toHex(currentBytes));decodeInput();}catch(Exception ex){showError("Cannot open file",ex);}}
+    private void openFile(Stage stage){FileChooser fc=new FileChooser();fc.setTitle("Open BER/DER file");fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("BER/DER files","*.ber","*.der","*.bin","*.dat","*.*"));File f=fc.showOpenDialog(stage);if(f==null)return;try{currentBytes=Files.readAllBytes(f.toPath());format.setValue("HEX");input.setText(toHex(currentBytes));decodeInput();setBerFile(f);}catch(Exception ex){showError("Cannot open file",ex);}}
     private String toHex(byte[] b){StringBuilder s=new StringBuilder();for(int i=0;i<b.length;i++){if(i>0)s.append(' ');s.append(String.format("%02X",b[i]));}return s.toString();}
     private void openDefinition(Stage stage){
         FileChooser fc=new FileChooser(); fc.setTitle("Open ASN.1 definition");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("ASN.1 definitions","*.asn1","*.asn","*.txt","*.*"));
         File f=fc.showOpenDialog(stage); if(f==null)return;
-        try { definition.setText(Files.readString(f.toPath())); } catch(Exception ex){ showError("Cannot open definition",ex); }
+        try { definition.setText(Files.readString(f.toPath())); setDefinitionFile(f); } catch(Exception ex){ showError("Cannot open definition",ex); }
     }
-    private void saveDefinition(Stage stage){FileChooser fc=new FileChooser();fc.setTitle("Save ASN.1 definition");fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("ASN.1 files","*.asn1","*.asn"));File f=fc.showSaveDialog(stage);if(f==null)return;try{Files.writeString(f.toPath(),definition.getText());}catch(Exception ex){showError("Cannot save definition",ex);}}
+    private void saveDefinition(Stage stage){FileChooser fc=new FileChooser();fc.setTitle("Save ASN.1 definition");fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("ASN.1 files","*.asn1","*.asn"));File f=fc.showSaveDialog(stage);if(f==null)return;try{Files.writeString(f.toPath(),definition.getText());setDefinitionFile(f);}catch(Exception ex){showError("Cannot save definition",ex);}}
     private void showError(String title,Exception ex){new Alert(Alert.AlertType.ERROR,title,ButtonType.OK){ {setHeaderText(ex.getMessage());} }.showAndWait();}
 
     public static void main(String[] args){launch(args);}
