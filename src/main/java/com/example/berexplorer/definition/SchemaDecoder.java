@@ -36,9 +36,15 @@ public final class SchemaDecoder {
             else if(t.ref!=null){Schema.Type rt=resolve(s,t); d.children.addAll(decodeType(s,label,rt,n,display).children);}
             return d;
         }
-        return new DecodedNode(label,t.kind,n,n==null?"<missing>":decodeValue(t,n));
+        return new DecodedNode(label,t.kind,n,n==null?"<missing>":decodeValue(label,t,n));
     }
-    private static String decodeValue(Schema.Type t,TlvNode n){String value=BerDecoder.decodeValue(n);if(!t.kind.equals("ENUMERATED")||t.enumValues.isEmpty())return value;String label="UNKNOWN";try{label=t.enumValues.getOrDefault(new java.math.BigInteger(n.getValue()).intValueExact(),"UNKNOWN");}catch(ArithmeticException|NumberFormatException ignored){}return value+" ["+label+"]";}
+    private static String decodeValue(String label,Schema.Type t,TlvNode n){
+        if(label!=null&&label.equalsIgnoreCase("communicationIdentityNumber")){
+            byte[] v=n.getValue();
+            if(v==null||v.length==0)return "<empty>";
+            return hex(v)+" ("+new java.math.BigInteger(1,v).toString()+")";
+        }
+        String value=BerDecoder.decodeValue(n);if(!t.kind.equals("ENUMERATED")||t.enumValues.isEmpty())return value;String label2="UNKNOWN";try{label2=t.enumValues.getOrDefault(new java.math.BigInteger(n.getValue()).intValueExact(),"UNKNOWN");}catch(ArithmeticException|NumberFormatException ignored){}return value+" ["+label2+"]";}
     private static void addSmsPduIfMessage(DecodedNode record){
         DecodedNode recordType=record.children.stream().filter(c->c.name.equals("recordType")).findFirst().orElse(null);
         DecodedNode sip=find(record,"sipMessage");
@@ -69,5 +75,6 @@ public final class SchemaDecoder {
         };
     }
     private static boolean universal(TlvNode n,int tag){return n.getTagClass()==TlvNode.TagClass.UNIVERSAL&&n.getTagNumber()==tag;}
+    private static String hex(byte[] v){StringBuilder s=new StringBuilder();for(int i=0;i<v.length;i++){if(i>0)s.append(' ');s.append(String.format(java.util.Locale.ROOT,"%02X",v[i]));}return s.toString();}
     public static class DecodedNode {public final String name,type,value; public final TlvNode raw; public final List<DecodedNode> children=new ArrayList<>(); public DecodedNode(String n,String t,TlvNode r,String v){name=n;type=t;raw=r;value=v;} @Override public String toString(){return name+" : "+type+" = "+value;}}
 }

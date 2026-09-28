@@ -18,8 +18,6 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import java.io.*;
@@ -158,7 +156,7 @@ public class Main extends Application {
                 Label decodedValue = new Label(value.value);
                 if (getTreeItem() != null && getTreeItem().isLeaf()
                         && !value.value.contains("\n") && !value.value.contains("\r")) {
-                    decodedValue.setFont(Font.font(decodedValue.getFont().getFamily(), FontWeight.BOLD, decodedValue.getFont().getSize()));
+                    decodedValue.setStyle("-fx-text-fill: darkgreen; -fx-font-weight: bold;");
                 }
                 HBox content = new HBox(prefix, decodedValue);
                 setText(null);
